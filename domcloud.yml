@@ -1,24 +1,22 @@
-# Configuración de despliegue para Domcloud (Modelo PaaS)
+# ===================================================================
+# Domcloud Deployment Configuration for CollabSphere (Fully Automated)
+# ===================================================================
+
 source: https://github.com/Lec7ral/WithWebSocket.git
 
-# Habilita la característica de Go para que Domcloud instale las herramientas de Go.
 features:
   - go
 
-# Habilita el addon de PostgreSQL. Domcloud creará una base de datos
-# y automáticamente inyectará la variable de entorno DATABASE_URL.
 addons:
   - postgresql
 
-# Configuración para el servidor web Nginx y el servidor de aplicaciones Passenger.
 nginx:
   root: public_html/public
   passenger:
     enabled: "on"
-    # Comando para iniciar la aplicación. Ejecuta el binario que compilamos.
-    app_start_command: env PORT=$PORT ./collabsphere
+    # AHORA, el comando de inicio es nuestro script de shell.
+    app_start_command: ./start.sh
 
-# Comandos que se ejecutan durante la fase de 'build' del despliegue.
 commands:
   # 1. Descarga y sincroniza las dependencias.
   - go mod tidy
@@ -27,12 +25,10 @@ commands:
   # 2. Compila la aplicación Go en un binario llamado 'collabsphere'.
   - go build -o collabsphere ./cmd/collabsphere
 
-# Variables de entorno para la aplicación en producción.
-# NO es necesario definir DATABASE_URL aquí, el addon lo hace por nosotros.
 vars:
-  # ¡MUY IMPORTANTE! Debes cambiar este valor por uno propio y seguro
-  # usando el comando 'dom env:set JWT_SECRET=...'
-  JWT_SECRET: "ChangeThisSecret_8c7b6a5d-4e3f-4a1b-9c8d-9e0f1a2b3c4d"
+  # ¡MUY IMPORTANTE! Debes establecer este valor de forma segura
+  # a través del panel de Domcloud o usando la CLI.
+  JWT_SECRET: "CHANGE_THIS_IN_THE_DOMCLOUD_UI_OR_CLI"
 
   # Nivel de Log para Producción.
   LOG_LEVEL: "info"
