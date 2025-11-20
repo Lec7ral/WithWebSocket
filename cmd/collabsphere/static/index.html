@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CollabSphere</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      :root {
+        color-scheme: dark;
+        --bg: #0f1410;
+        --bg-soft: #151b16;
+        --bg-softer: #1b221c;
+        --accent: #2f8f5b;
+        --accent-soft: rgba(47, 143, 91, 0.2);
+        --accent-strong: #36a567;
+        --danger: #c95151;
+        --text: #f7f7f5;
+        --muted: #9aa09a;
+        --border: #242c25;
+        --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.6);
+        --radius-lg: 18px;
+        --radius-md: 12px;
+        --radius-sm: 8px;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top left, #182217, #060806);
+        color: var(--text);
+      }
+
+      body {
+        overflow: hidden;
+      }
+
+      .app-root {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 8px;
+        gap: 6px;
+      }
+
+      .app-main {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1.8fr) 260px;
+        gap: 8px;
+      }
+
+      @media (max-width: 900px) {
+        .app-main {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto auto auto;
+        }
+      }
+
+      .panel {
+        background: var(--bg-soft);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-soft);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .panel-header {
+        flex: 0 0 auto;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .panel-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-size: 11px;
+      }
+
+      .text-input {
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--bg-softer);
+        color: var(--text);
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+
+      .text-input:focus {
+        outline: none;
+        border-color: var(--accent-soft);
+        box-shadow: 0 0 0 1px rgba(47, 143, 91, 0.3);
+      }
+
+      .btn {
+        border-radius: 999px;
+        border: none;
+        padding: 6px 10px;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+        min-height: 30px;
+        cursor: pointer;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+
+      .primary-btn {
+        background: var(--accent);
+        color: #071108;
+      }
+
+      .primary-btn:active {
+        background: var(--accent-strong);
+      }
+
+      .secondary-btn {
+        background: var(--bg-softer);
+        color: var(--accent-strong);
+        border: 1px solid var(--accent-soft);
+      }
+
+      .ghost-btn {
+        background: transparent;
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
+
+      .danger-btn {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid rgba(201, 81, 81, 0.5);
+      }
+
+      .tiny-btn {
+        padding: 4px 8px;
+        min-height: 26px;
+        font-size: 11px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      /* Left column */
+
+      .left-body {
+        padding: 8px 10px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow: hidden;
+      }
+
+      .user-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+      }
+
+      .user-pill {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--bg-softer);
+        font-size: 13px;
+        color: var(--muted);
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        margin-right: 6px;
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .status-dot.disconnected {
+        background: #555;
+      }
+
+      .status-dot.connecting {
+        background: #d7a94a;
+      }
+
+      .status-dot.connected {
+        background: var(--accent-strong);
+      }
+
+      .room-join-row {
+        display: flex;
+        gap: 6px;
+      }
+
+      .room-actions-row {
+        display: flex;
+        gap: 6px;
+      }
+
+      .conversations {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow: hidden;
+      }
+
+      .conv-section-title {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 4px;
+        margin-bottom: 2px;
+      }
+
+      .conv-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 2px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .conv-item {
+        border-radius: var(--radius-md);
+        padding: 6px 8px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid transparent;
+        background: rgba(18, 22, 18, 0.8);
+        cursor: pointer;
+      }
+
+      .conv-item span {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .conv-item.active {
+        border-color: var(--accent-soft);
+        background: rgba(47, 143, 91, 0.14);
+      }
+
+      .conv-item .badge {
+        font-size: 9px;
+      }
+
+      /* Center column */
+
+      .tabs-header {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        padding: 4px;
+        gap: 4px;
+        background: rgba(10, 15, 10, 0.9);
+      }
+
+      .tab-btn {
+        flex: 1;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        padding: 6px 8px;
+        font-size: 13px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+      }
+
+      .tab-btn.active {
+        background: var(--accent-soft);
+        border-color: var(--accent-soft);
+        color: var(--accent-strong);
+      }
+
+      .center-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .center-inner {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .chat-view {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .chat-header-secondary {
+        flex: 0 0 auto;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .chat-messages {
+        flex: 1;
+        min-height: 0;
+        padding: 8px 10px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+      }
+
+      .chat-message-row {
+        display: flex;
+      }
+
+      .chat-message-row.self {
+        justify-content: flex-end;
+      }
+
+      .chat-bubble {
+        max-width: 75%;
+        padding: 6px 8px;
+        border-radius: 14px;
+        background: rgba(18, 22, 18, 0.9);
+        border: 1px solid transparent;
+      }
+
+      .chat-message-row.self .chat-bubble {
+        background: rgba(47, 143, 91, 0.2);
+        border-color: var(--accent-soft);
+      }
+
+      .chat-sender {
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 2px;
+      }
+
+      .chat-text {
+        word-wrap: break-word;
+      }
+
+      .chat-input-row {
+        flex: 0 0 auto;
+        display: flex;
+        gap: 6px;
+        padding: 6px 10px;
+        border-top: 1px solid var(--border);
+      }
+
+      .typing-indicator {
+        flex: 0 0 auto;
+        min-height: 16px;
+        padding: 0 10px 4px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .whiteboard-view {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .board-toolbar {
+        flex: 0 0 auto;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .board-container {
+        flex: 1;
+        min-height: 0;
+        padding: 8px;
+      }
+
+      #whiteboard {
+        width: 100%;
+        height: 100%;
+        border-radius: var(--radius-md);
+        background: radial-gradient(circle at top left, #111811, #040604);
+        border: 1px solid var(--border);
+        touch-action: none;
+      }
+
+      .color-input {
+        width: 32px;
+        height: 24px;
+        padding: 0;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: transparent;
+      }
+
+      .line-width-input {
+        width: 72px;
+      }
+
+      /* Right column */
+
+      .log-body {
+        padding: 6px 8px 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-height: 0;
+      }
+
+      .log-textarea {
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        resize: none;
+        background: #050706;
+        color: var(--muted);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 11px;
+        padding: 8px;
+        outline: none;
+      }
+
+      .log-textarea::-webkit-scrollbar {
+        width: 3px;
+      }
+
+      .log-textarea::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 999px;
+      }
+
+      /* Toast */
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 14px;
+        transform: translateX(-50%);
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.9);
+        color: var(--text);
+        font-size: 12px;
+        box-shadow: var(--shadow-soft);
+        max-width: 80%;
+        text-align: center;
+        z-index: 20;
+      }
+
+      /* Modal */
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.74);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 30;
+      }
+
+      .modal {
+        width: min(360px, 90vw);
+        background: var(--bg-soft);
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-soft);
+        padding: 16px 16px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .modal-title {
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .modal-subtitle {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      /* Scrollbars */
+
+      .conv-list::-webkit-scrollbar,
+      .chat-messages::-webkit-scrollbar {
+        width: 3px;
+      }
+
+      .conv-list::-webkit-scrollbar-thumb,
+      .chat-messages::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 999px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-root">
+      <div class="app-main">
+        <!-- Left: Navigation -->
+        <section class="panel">
+          <header class="panel-header">
+            <span> Navegación </span>
+            <span id="user-count-badge" class="badge">0</span>
+          </header>
+          <div class="panel-body left-body">
+            <div class="user-info">
+              <div id="current-user-pill" class="user-pill">
+                No autenticado
+              </div>
+              <div class="status-row">
+                <div
+                  id="conn-status-dot"
+                  class="status-dot disconnected"
+                ></div>
+                <span id="conn-status-label">Desconectado</span>
+              </div>
+            </div>
+
+            <div class="room-join-row">
+              <input
+                id="room-input"
+                class="text-input"
+                type="text"
+                placeholder="ID de sala"
+                autocomplete="off"
+              />
+              <button id="join-room-btn" class="btn primary-btn">
+                Unir
+              </button>
+            </div>
+            <div class="room-actions-row">
+              <button id="leave-room-btn" class="btn ghost-btn tiny-btn">
+                Salir
+              </button>
+              <button
+                id="refresh-rooms-btn"
+                class="btn secondary-btn tiny-btn"
+              >
+                Salas
+              </button>
+            </div>
+
+            <div class="conversations">
+              <div class="conv-section-title">Conversaciones</div>
+              <div id="conv-list" class="conv-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Center: Workspace -->
+        <section class="panel">
+          <header class="panel-header">
+            <span id="center-title">Sin sala</span>
+            <span id="center-subtitle" class="badge">Offline</span>
+          </header>
+          <div class="panel-body center-body">
+            <div class="tabs-header">
+              <button
+                id="tab-chat"
+                class="tab-btn active"
+                data-tab="chat"
+              >
+                Chat
+              </button>
+              <button
+                id="tab-board"
+                class="tab-btn"
+                data-tab="board"
+              >
+                Pizarra
+              </button>
+            </div>
+            <div class="center-inner">
+              <!-- Chat view -->
+              <div id="view-chat" class="chat-view">
+                <div class="chat-header-secondary">
+                  <span id="active-conv-label">Sin conversación</span>
+                  <span id="typing-indicator" class="typing-indicator"></span>
+                </div>
+                <div id="chat-messages" class="chat-messages"></div>
+                <div class="chat-input-row">
+                  <input
+                    id="chat-input"
+                    class="text-input"
+                    type="text"
+                    placeholder="Escribe un mensaje"
+                    autocomplete="off"
+                  />
+                  <button
+                    id="send-chat-btn"
+                    class="btn primary-btn"
+                    title="Enviar"
+                  >
+                    ➤
+                  </button>
+                </div>
+              </div>
+
+              <!-- Whiteboard view -->
+              <div
+                id="view-board"
+                class="whiteboard-view hidden"
+              >
+                <div class="board-toolbar">
+                  <span>Pizarra</span>
+                  <input
+                    id="color-input"
+                    type="color"
+                    value="#2f8f5b"
+                    class="color-input"
+                  />
+                  <input
+                    id="line-width-input"
+                    type="range"
+                    min="1"
+                    max="12"
+                    value="3"
+                    class="line-width-input"
+                  />
+                  <button
+                    id="clear-board-btn"
+                    class="btn tiny-btn ghost-btn"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+                <div class="board-container">
+                  <canvas id="whiteboard"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Debug log -->
+        <section class="panel">
+          <header class="panel-header">
+            <span>Log</span>
+            <button
+              id="clear-log-btn"
+              class="btn tiny-btn ghost-btn"
+            >
+              Limpiar
+            </button>
+          </header>
+          <div class="panel-body log-body">
+            <textarea
+              id="debug-log"
+              class="log-textarea"
+              readonly
+            ></textarea>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal-backdrop">
+      <div class="modal">
+        <div class="modal-title">CollabSphere</div>
+        <div class="modal-subtitle">
+          Ingresa un nombre de usuario para comenzar.
+        </div>
+        <input
+          id="login-username-input"
+          class="text-input"
+          type="text"
+          placeholder="Nombre de usuario"
+          autocomplete="off"
+        />
+        <div class="modal-actions">
+          <button
+            id="login-btn"
+            class="btn primary-btn"
+          >
+            Login
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        const BASE = "";
+
+        const state = {
+          token: null,
+          user: null, // { id, username, sessionId? }
+          currentRoomId: null,
+          ws: null,
+          wsConnecting: false,
+          wsShouldReconnect: false,
+          wsReconnectAttempts: 0,
+          usersById: new Map(), // id -> {id, username}
+          userNameCache: new Map(),
+          // conversations: convId -> [{ fromSelf, senderId, senderName, text, dm }]
+          conversations: new Map(),
+          activeConvId: null,
+          typingUsers: new Set(),
+          lastTypingSent: false,
+          typingTimeout: null,
+        };
+
+        // DOM refs
+        const els = {};
+
+        function $(id) {
+          return document.getElementById(id);
+        }
+
+        function initDomRefs() {
+          els.loginModal = $("login-modal");
+          els.loginUsername = $("login-username-input");
+          els.loginBtn = $("login-btn");
+
+          els.userPill = $("current-user-pill");
+          els.connStatusDot = $("conn-status-dot");
+          els.connStatusLabel = $("conn-status-label");
+          els.userCountBadge = $("user-count-badge");
+
+          els.roomInput = $("room-input");
+          els.joinRoomBtn = $("join-room-btn");
+          els.leaveRoomBtn = $("leave-room-btn");
+          els.refreshRoomsBtn = $("refresh-rooms-btn");
+
+          els.convList = $("conv-list");
+
+          els.centerTitle = $("center-title");
+          els.centerSubtitle = $("center-subtitle");
+          els.activeConvLabel = $("active-conv-label");
+          els.typingIndicator = $("typing-indicator");
+
+          els.tabChat = $("tab-chat");
+          els.tabBoard = $("tab-board");
+          els.viewChat = $("view-chat");
+          els.viewBoard = $("view-board");
+
+          els.chatMessages = $("chat-messages");
+          els.chatInput = $("chat-input");
+          els.sendChatBtn = $("send-chat-btn");
+
+          els.colorInput = $("color-input");
+          els.lineWidthInput = $("line-width-input");
+          els.clearBoardBtn = $("clear-board-btn");
+          els.whiteboard = $("whiteboard");
+
+          els.debugLog = $("debug-log");
+          els.clearLogBtn = $("clear-log-btn");
+
+          els.toast = $("toast");
+        }
+
+        /* Toast */
+
+        let toastTimeout = null;
+        function showToast(msg) {
+          if (!els.toast) return;
+          els.toast.textContent = msg;
+          els.toast.classList.remove("hidden");
+          clearTimeout(toastTimeout);
+          toastTimeout = setTimeout(() => {
+            els.toast.classList.add("hidden");
+          }, 2200);
+        }
+
+        /* Auth & API */
+
+        async function jsonFetch(path, opts = {}) {
+          const res = await fetch(BASE + path, {
+            headers: {
+              "Content-Type": "application/json",
+              ...(opts.headers || {}),
+            },
+            ...opts,
+          });
+          if (!res.ok) {
+            const text = await res.text();
+            const err = new Error(text || res.statusText);
+            err.status = res.status;
+            throw err;
+          }
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json")) {
+            return res.json();
+          }
+          return res.text();
+        }
+
+        async function apiLogin(username) {
+          const body = JSON.stringify({ username });
+          const data = await jsonFetch("/login", { method: "POST", body });
+          if (!data.token) throw new Error("Token no recibido");
+          state.token = data.token;
+          localStorage.setItem("collab_token", data.token);
+
+          // Decode JWT payload (no verification)
+          try {
+            const [, payloadBase64] = data.token.split(".");
+            if (payloadBase64) {
+              const json = atob(
+                payloadBase64.replace(/-/g, "+").replace(/_/g, "/")
+              );
+              const payload = JSON.parse(json);
+              state.user = {
+                id: payload.userId,
+                username: payload.username,
+                sessionId: payload.sessionId,
+              };
+            }
+          } catch (e) {
+            console.warn("No se pudo decodificar el JWT", e);
+          }
+
+          if (!state.user) {
+            state.user = { id: "me", username };
+          }
+
+          return data.token;
+        }
+
+        async function apiListRooms() {
+          return jsonFetch("/api/rooms", { method: "GET" });
+        }
+
+        async function apiGetUser(userId) {
+          return jsonFetch(`/api/users/${encodeURIComponent(userId)}`, {
+            method: "GET",
+          });
+        }
+
+        /* Debug log */
+
+        function logDebug(kind, payload) {
+          if (!els.debugLog) return;
+          const ts = new Date().toISOString();
+          const line =
+            `[${ts}] ${kind}: ` +
+            (typeof payload === "string"
+              ? payload
+              : JSON.stringify(payload)) +
+            "\n";
+          els.debugLog.value += line;
+          // Keep scroll at bottom
+          els.debugLog.scrollTop = els.debugLog.scrollHeight;
+        }
+
+        /* WS status UI */
+
+        function setConnStatus(status) {
+          if (!els.connStatusDot || !els.connStatusLabel) return;
+          els.connStatusDot.classList.remove(
+            "connected",
+            "connecting",
+            "disconnected"
+          );
+          if (status === "connected") {
+            els.connStatusDot.classList.add("connected");
+            els.connStatusLabel.textContent = "Conectado";
+          } else if (status === "connecting") {
+            els.connStatusDot.classList.add("connecting");
+            els.connStatusLabel.textContent = "Conectando…";
+          } else {
+            els.connStatusDot.classList.add("disconnected");
+            els.connStatusLabel.textContent = "Desconectado";
+          }
+        }
+
+        /* Conversations */
+
+        function convIdForRoom(roomId) {
+          return roomId ? `room:${roomId}` : null;
+        }
+
+        function convIdForDm(userId) {
+          return `dm:${userId}`;
+        }
+
+        function ensureConversation(convId) {
+          if (!convId) return;
+          if (!state.conversations.has(convId)) {
+            state.conversations.set(convId, []);
+          }
+        }
+
+        function addMessageToConversation(convId, message) {
+          if (!convId) return;
+          ensureConversation(convId);
+          state.conversations.get(convId).push(message);
+          if (state.activeConvId === convId) {
+            renderChatMessages();
+          }
+        }
+
+        function renderConversationsList() {
+          if (!els.convList) return;
+          els.convList.innerHTML = "";
+
+          const roomId = state.currentRoomId;
+          if (roomId) {
+            const convId = convIdForRoom(roomId);
+            ensureConversation(convId);
+            const item = document.createElement("div");
+            item.className = "conv-item";
+            if (state.activeConvId === convId) {
+              item.classList.add("active");
+            }
+            const span = document.createElement("span");
+            span.textContent = `${roomId} (Room Chat)`;
+            const badge = document.createElement("span");
+            badge.className = "badge";
+            badge.textContent = "Sala";
+            item.appendChild(span);
+            item.appendChild(badge);
+            item.addEventListener("click", () => {
+              state.activeConvId = convId;
+              updateActiveConversationLabel();
+              renderChatMessages();
+              renderConversationsList();
+            });
+            els.convList.appendChild(item);
+          }
+
+          if (state.usersById.size > 0) {
+            const users = Array.from(state.usersById.values()).filter(
+              (u) => u.id !== state.user?.id
+            );
+            users.forEach((u) => {
+              const convId = convIdForDm(u.id);
+              ensureConversation(convId);
+              const item = document.createElement("div");
+              item.className = "conv-item";
+              if (state.activeConvId === convId) {
+                item.classList.add("active");
+              }
+              const span = document.createElement("span");
+              span.textContent = u.username || u.id.slice(0, 8);
+              const badge = document.createElement("span");
+              badge.className = "badge";
+              badge.textContent = "DM";
+              item.appendChild(span);
+              item.appendChild(badge);
+              item.addEventListener("click", () => {
+                state.activeConvId = convId;
+                updateActiveConversationLabel();
+                renderChatMessages();
+                renderConversationsList();
+              });
+              els.convList.appendChild(item);
+            });
+          }
+        }
+
+        function updateActiveConversationLabel() {
+          if (!els.activeConvLabel) return;
+          const cid = state.activeConvId;
+          if (!cid) {
+            els.activeConvLabel.textContent = "Sin conversación";
+            return;
+          }
+          if (cid.startsWith("room:")) {
+            const roomId = cid.slice("room:".length);
+            els.activeConvLabel.textContent = `${roomId} (Sala)`;
+          } else if (cid.startsWith("dm:")) {
+            const userId = cid.slice("dm:".length);
+            const u =
+              state.usersById.get(userId) || state.userNameCache.get(userId);
+            const name = u?.username || userId.slice(0, 8);
+            els.activeConvLabel.textContent = `DM con ${name}`;
+          }
+        }
+
+        function renderChatMessages() {
+          if (!els.chatMessages) return;
+          els.chatMessages.innerHTML = "";
+          const cid = state.activeConvId;
+          if (!cid || !state.conversations.has(cid)) return;
+          const messages = state.conversations.get(cid);
+          messages.forEach((m) => {
+            const row = document.createElement("div");
+            row.className = "chat-message-row";
+            if (m.fromSelf) row.classList.add("self");
+            const bubble = document.createElement("div");
+            bubble.className = "chat-bubble";
+
+            if (!m.fromSelf) {
+              const sender = document.createElement("div");
+              sender.className = "chat-sender";
+              sender.textContent = m.senderName || "Usuario";
+              bubble.appendChild(sender);
+            }
+
+            const textDiv = document.createElement("div");
+            textDiv.className = "chat-text";
+            textDiv.textContent = m.text;
+            bubble.appendChild(textDiv);
+
+            row.appendChild(bubble);
+            els.chatMessages.appendChild(row);
+          });
+          els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+        }
+
+        function updateUserCountBadge() {
+          if (!els.userCountBadge) return;
+          els.userCountBadge.textContent = state.usersById.size.toString();
+        }
+
+        function updateCenterHeader() {
+          const roomId = state.currentRoomId;
+          if (!els.centerTitle || !els.centerSubtitle) return;
+          if (roomId) {
+            els.centerTitle.textContent = `Sala: ${roomId}`;
+            els.centerSubtitle.textContent =
+              state.ws && state.ws.readyState === WebSocket.OPEN
+                ? "Conectado"
+                : "Conectando…";
+          } else {
+            els.centerTitle.textContent = "Sin sala";
+            els.centerSubtitle.textContent = "Offline";
+          }
+        }
+
+        /* Typing indicator */
+
+        function setTypingIndicator() {
+          if (!els.typingIndicator) return;
+          const ids = Array.from(state.typingUsers);
+          if (!ids.length || state.activeConvId?.startsWith("dm:")) {
+            els.typingIndicator.textContent = "";
+            return;
+          }
+          const names = ids
+            .map(
+              (id) =>
+                state.usersById.get(id)?.username ||
+                state.userNameCache.get(id)?.username ||
+                "Alguien"
+            )
+            .slice(0, 2);
+          if (names.length === 1) {
+            els.typingIndicator.textContent = `${names[0]} está escribiendo…`;
+          } else {
+            els.typingIndicator.textContent = `${names[0]} y ${names[1]} están escribiendo…`;
+          }
+        }
+
+        function handleTypingChange(text) {
+          const isTyping = text.trim().length > 0;
+          if (isTyping && !state.lastTypingSent) {
+            sendWsMessage({ type: "typing_start" });
+            state.lastTypingSent = true;
+          }
+          clearTimeout(state.typingTimeout);
+          state.typingTimeout = setTimeout(() => {
+            stopTyping();
+          }, 1500);
+        }
+
+        function stopTyping() {
+          if (state.lastTypingSent) {
+            sendWsMessage({ type: "typing_stop" });
+            state.lastTypingSent = false;
+          }
+          clearTimeout(state.typingTimeout);
+        }
+
+        /* Whiteboard */
+
+        const board = {
+          canvas: null,
+          ctx: null,
+          isDrawing: false,
+          lastPoint: null,
+          color: "#2f8f5b",
+          lineWidth: 3,
+        };
+
+        function initCanvas() {
+          board.canvas = els.whiteboard;
+          if (!board.canvas) return;
+          board.ctx = board.canvas.getContext("2d");
+          resizeCanvas();
+          window.addEventListener("resize", resizeCanvas);
+
+          board.canvas.addEventListener("mousedown", handlePointerDown);
+          board.canvas.addEventListener("mousemove", handlePointerMove);
+          window.addEventListener("mouseup", handlePointerUp);
+
+          board.canvas.addEventListener("mouseleave", handlePointerUp);
+
+          board.canvas.addEventListener("touchstart", handlePointerDown, {
+            passive: false,
+          });
+          board.canvas.addEventListener("touchmove", handlePointerMove, {
+            passive: false,
+          });
+          window.addEventListener("touchend", handlePointerUp);
+          window.addEventListener("touchcancel", handlePointerUp);
+
+          if (els.colorInput) {
+            els.colorInput.addEventListener("input", (e) => {
+              board.color = e.target.value || board.color;
+            });
+          }
+          if (els.lineWidthInput) {
+            els.lineWidthInput.addEventListener("input", (e) => {
+              const v = Number(e.target.value);
+              if (!Number.isNaN(v)) board.lineWidth = v;
+            });
+          }
+          if (els.clearBoardBtn) {
+            els.clearBoardBtn.addEventListener("click", () => {
+              clearCanvas();
+              sendWsMessage({ type: "clear_board" });
+            });
+          }
+        }
+
+        function resizeCanvas() {
+          if (!board.canvas || !board.ctx) return;
+          const rect = board.canvas.getBoundingClientRect();
+          const ratio = window.devicePixelRatio || 1;
+          board.canvas.width = rect.width * ratio;
+          board.canvas.height = rect.height * ratio;
+          board.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        }
+
+        function getPointFromEvent(ev) {
+          let x, y;
+          const rect = board.canvas.getBoundingClientRect();
+          if (ev.touches && ev.touches[0]) {
+            const t = ev.touches[0];
+            x = t.clientX - rect.left;
+            y = t.clientY - rect.top;
+          } else if (ev.changedTouches && ev.changedTouches[0]) {
+            const t = ev.changedTouches[0];
+            x = t.clientX - rect.left;
+            y = t.clientY - rect.top;
+          } else {
+            x = ev.clientX - rect.left;
+            y = ev.clientY - rect.top;
+          }
+          return { x, y };
+        }
+
+        function handlePointerDown(ev) {
+          ev.preventDefault();
+          if (!board.ctx || !state.currentRoomId) return;
+          const pt = getPointFromEvent(ev);
+          board.isDrawing = true;
+          board.lastPoint = pt;
+          drawPoint(pt, board.color, board.lineWidth);
+          sendWsMessage({
+            type: "draw_start",
+            payload: {
+              x: pt.x,
+              y: pt.y,
+              color: board.color,
+              lineWidth: board.lineWidth,
+            },
+          });
+        }
+
+        function handlePointerMove(ev) {
+          if (!board.isDrawing) return;
+          ev.preventDefault();
+          const pt = getPointFromEvent(ev);
+          drawLine(board.lastPoint, pt, board.color, board.lineWidth);
+          board.lastPoint = pt;
+          sendWsMessage({
+            type: "draw_move",
+            payload: {
+              x: pt.x,
+              y: pt.y,
+              color: board.color,
+              lineWidth: board.lineWidth,
+            },
+          });
+        }
+
+        function handlePointerUp(ev) {
+          if (!board.isDrawing) return;
+          ev.preventDefault();
+          board.isDrawing = false;
+          board.lastPoint = null;
+          sendWsMessage({ type: "draw_end" });
+        }
+
+        function drawPoint(pt, color, width) {
+          if (!board.ctx) return;
+          board.ctx.save();
+          board.ctx.fillStyle = color;
+          board.ctx.beginPath();
+          board.ctx.arc(pt.x, pt.y, width / 2, 0, Math.PI * 2);
+          board.ctx.fill();
+          board.ctx.restore();
+        }
+
+        function drawLine(from, to, color, width) {
+          if (!board.ctx || !from || !to) return;
+          board.ctx.save();
+          board.ctx.strokeStyle = color;
+          board.ctx.lineWidth = width;
+          board.ctx.lineCap = "round";
+          board.ctx.beginPath();
+          board.ctx.moveTo(from.x, from.y);
+          board.ctx.lineTo(to.x, to.y);
+          board.ctx.stroke();
+          board.ctx.restore();
+        }
+
+        function clearCanvas() {
+          if (!board.ctx || !board.canvas) return;
+          board.ctx.clearRect(0, 0, board.canvas.width, board.canvas.height);
+        }
+
+        function applyRemoteDrawEvent(evt) {
+          const { type, payload } = evt;
+          if (!board.ctx) return;
+          if (type === "clear_board") {
+            clearCanvas();
+            return;
+          }
+          if (type === "draw_start") {
+            const pt = { x: payload.x, y: payload.y };
+            drawPoint(pt, payload.color, payload.lineWidth);
+            board.lastPoint = pt;
+          } else if (type === "draw_move") {
+            const pt = { x: payload.x, y: payload.y };
+            drawLine(board.lastPoint, pt, payload.color, payload.lineWidth);
+            board.lastPoint = pt;
+          } else if (type === "draw_end") {
+            board.lastPoint = null;
+          }
+        }
+
+        function replayWhiteboardEvents(events) {
+          clearCanvas();
+          board.lastPoint = null;
+          events.forEach((evt) => applyRemoteDrawEvent(evt));
+        }
+
+        /* WebSocket */
+
+        function buildWsUrl(roomId) {
+          const scheme = location.protocol === "https:" ? "wss" : "ws";
+          return (
+            `${scheme}://${location.host}/ws/` +
+            encodeURIComponent(roomId) +
+            `?token=${encodeURIComponent(state.token)}`
+          );
+        }
+
+        function resetRoomState() {
+          state.currentRoomId = null;
+          state.usersById.clear();
+          state.typingUsers.clear();
+          state.wsShouldReconnect = false;
+          state.wsReconnectAttempts = 0;
+          if (state.ws) {
+            try {
+              state.ws.onclose = null;
+              state.ws.onerror = null;
+              state.ws.onmessage = null;
+              state.ws.close();
+            } catch (_) {}
+          }
+          state.ws = null;
+          updateUserCountBadge();
+          renderConversationsList();
+          updateCenterHeader();
+          setTypingIndicator();
+          setConnStatus("disconnected");
+        }
+
+        function connectToRoom(roomId) {
+          if (!state.token || !roomId) {
+            showToast("Primero inicia sesión y sala válida");
+            return;
+          }
+
+          if (state.ws) {
+            try {
+              state.wsShouldReconnect = false;
+              state.ws.close();
+            } catch (_) {}
+          }
+
+          state.currentRoomId = roomId;
+          state.wsShouldReconnect = true;
+          state.wsReconnectAttempts = 0;
+          state.usersById.clear();
+          state.typingUsers.clear();
+          updateUserCountBadge();
+          updateCenterHeader();
+          renderConversationsList();
+          attemptWsConnect();
+        }
+
+        function attemptWsConnect() {
+          if (!state.currentRoomId || !state.token || !state.wsShouldReconnect) {
+            return;
+          }
+          const url = buildWsUrl(state.currentRoomId);
+          setConnStatus("connecting");
+          updateCenterHeader();
+          state.wsConnecting = true;
+          logDebug("WS", "Connecting to " + url);
+          const ws = new WebSocket(url);
+          state.ws = ws;
+
+          ws.onopen = () => {
+            state.wsConnecting = false;
+            state.wsReconnectAttempts = 0;
+            setConnStatus("connected");
+            updateCenterHeader();
+            showToast(`Conectado a ${state.currentRoomId}`);
+            logDebug("WS", "Connected");
+          };
+
+          ws.onmessage = async (event) => {
+            let msg;
+            try {
+              msg = JSON.parse(event.data);
+            } catch {
+              logDebug("WS_RECV", "Invalid JSON: " + event.data);
+              return;
+            }
+            logDebug("WS_RECV", msg);
+            handleWsMessage(msg);
+          };
+
+          ws.onclose = (ev) => {
+            logDebug(
+              "WS",
+              `Closed: code=${ev.code} reason=${ev.reason || ""}`
+            );
+            setConnStatus("disconnected");
+            updateCenterHeader();
+            if (!state.wsShouldReconnect) return;
+            scheduleReconnect();
+          };
+
+          ws.onerror = () => {
+            logDebug("WS", "Error");
+            showToast("Error de conexión");
+          };
+        }
+
+        function scheduleReconnect() {
+          state.wsReconnectAttempts += 1;
+          const attempt = state.wsReconnectAttempts;
+          const delay = Math.min(30000, 2000 * Math.pow(2, attempt - 1));
+          logDebug("WS", `Reconnecting in ${delay}ms (attempt ${attempt})`);
+          setTimeout(() => {
+            if (!state.wsShouldReconnect) return;
+            attemptWsConnect();
+          }, delay);
+        }
+
+        function sendWsMessage(obj) {
+          if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+          try {
+            state.ws.send(JSON.stringify(obj));
+            logDebug("WS_SEND", obj);
+          } catch (e) {
+            console.warn("WS send error", e);
+          }
+        }
+
+        async function ensureUserMeta(userId) {
+          if (!userId) return null;
+          if (state.usersById.has(userId)) return state.usersById.get(userId);
+          if (state.userNameCache.has(userId)) {
+            return state.userNameCache.get(userId);
+          }
+          try {
+            const data = await apiGetUser(userId);
+            state.userNameCache.set(userId, data);
+            return data;
+          } catch (e) {
+            console.warn("getUser failed", e);
+            return null;
+          }
+        }
+
+        async function handleWsMessage(msg) {
+          const { type, payload, sender } = msg;
+          switch (type) {
+            case "initial_state": {
+              state.usersById.clear();
+              if (payload && Array.isArray(payload.users)) {
+                payload.users.forEach((u) =>
+                  state.usersById.set(u.id, {
+                    id: u.id,
+                    username: u.username,
+                  })
+                );
+              }
+              updateUserCountBadge();
+              renderConversationsList();
+              if (payload && payload.whiteboard && payload.whiteboard.events) {
+                replayWhiteboardEvents(payload.whiteboard.events);
+              }
+              break;
+            }
+            case "user_list_update": {
+              state.usersById.clear();
+              payload.forEach((u) => {
+                state.usersById.set(u.id, {
+                  id: u.id,
+                  username: u.username,
+                });
+              });
+              updateUserCountBadge();
+              renderConversationsList();
+              break;
+            }
+            case "text_message": {
+              const userId = sender;
+              const content = payload;
+              const fromSelf = userId === state.user?.id;
+              const meta = await ensureUserMeta(userId);
+              const senderName = meta?.username || userId;
+              const roomId = state.currentRoomId;
+              if (!roomId) break;
+              const convId = convIdForRoom(roomId);
+              addMessageToConversation(convId, {
+                fromSelf,
+                senderId: userId,
+                senderName,
+                text: content,
+                dm: false,
+              });
+              if (!state.activeConvId) {
+                state.activeConvId = convId;
+                updateActiveConversationLabel();
+              }
+              break;
+            }
+            case "direct_message": {
+              const userId = sender;
+              const content = payload;
+              const fromSelf = userId === state.user?.id;
+              const meta = await ensureUserMeta(userId);
+              const senderName = meta?.username || userId;
+              const otherId = fromSelf ? payload.recipient_id || "" : userId;
+              const convId = convIdForDm(otherId || userId);
+              addMessageToConversation(convId, {
+                fromSelf,
+                senderId: userId,
+                senderName,
+                text: content,
+                dm: true,
+              });
+              if (!state.activeConvId) {
+                state.activeConvId = convId;
+                updateActiveConversationLabel();
+              }
+              renderConversationsList();
+              break;
+            }
+            case "draw_start":
+            case "draw_move":
+            case "draw_end":
+            case "clear_board": {
+              if (sender && sender === state.user?.id) return;
+              applyRemoteDrawEvent({ type, payload, sender });
+              break;
+            }
+            case "typing_start": {
+              if (sender && sender !== state.user?.id) {
+                state.typingUsers.add(sender);
+                setTypingIndicator();
+              }
+              break;
+            }
+            case "typing_stop": {
+              if (sender && sender !== state.user?.id) {
+                state.typingUsers.delete(sender);
+                setTypingIndicator();
+              }
+              break;
+            }
+            default:
+              break;
+          }
+        }
+
+        /* UI event handlers */
+
+        function setupAuthModal() {
+          els.loginBtn.addEventListener("click", async () => {
+            const username = (els.loginUsername.value || "").trim();
+            if (!username) return;
+            try {
+              await apiLogin(username);
+              els.loginModal.classList.add("hidden");
+              updateUserDisplay();
+              showToast("Autenticado");
+            } catch (e) {
+              console.error(e);
+              showToast("Error de login");
+            }
+          });
+
+          els.loginUsername.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              els.loginBtn.click();
+            }
+          });
+
+          // Restore token if exists
+          const savedToken = localStorage.getItem("collab_token");
+          if (savedToken) {
+            state.token = savedToken;
+            try {
+              const [, payloadBase64] = savedToken.split(".");
+              if (payloadBase64) {
+                const json = atob(
+                  payloadBase64.replace(/-/g, "+").replace(/_/g, "/")
+                );
+                const payload = JSON.parse(json);
+                state.user = {
+                  id: payload.userId,
+                  username: payload.username,
+                  sessionId: payload.sessionId,
+                };
+              }
+            } catch (_) {
+              // ignore
+            }
+            if (state.user) {
+              els.loginModal.classList.add("hidden");
+              updateUserDisplay();
+            } else {
+              state.token = null;
+              localStorage.removeItem("collab_token");
+            }
+          }
+        }
+
+        function updateUserDisplay() {
+          if (!els.userPill) return;
+          if (state.user) {
+            els.userPill.textContent = `Conectado como ${state.user.username}`;
+          } else {
+            els.userPill.textContent = "No autenticado";
+          }
+        }
+
+        function setupRoomControls() {
+          els.joinRoomBtn.addEventListener("click", () => {
+            const roomId = (els.roomInput.value || "").trim();
+            if (!roomId) return;
+            if (!state.token) {
+              showToast("Primero inicia sesión");
+              return;
+            }
+            connectToRoom(roomId);
+            const convId = convIdForRoom(roomId);
+            state.activeConvId = convId;
+            updateActiveConversationLabel();
+          });
+
+          els.roomInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              els.joinRoomBtn.click();
+            }
+          });
+
+          els.leaveRoomBtn.addEventListener("click", () => {
+            if (!state.currentRoomId) return;
+            state.wsShouldReconnect = false;
+            resetRoomState();
+            showToast("Saliste de la sala");
+          });
+
+          els.refreshRoomsBtn.addEventListener("click", async () => {
+            try {
+              const rooms = await apiListRooms();
+              const names = rooms
+                .map((r) => `${r.id} (${r.clientCount})`)
+                .join(", ");
+              showToast("Salas: " + (names || "ninguna"));
+            } catch (e) {
+              console.error(e);
+              showToast("No se pudieron cargar las salas");
+            }
+          });
+        }
+
+        function setupTabs() {
+          function setTab(tab) {
+            if (tab === "chat") {
+              els.tabChat.classList.add("active");
+              els.tabBoard.classList.remove("active");
+              els.viewChat.classList.remove("hidden");
+              els.viewBoard.classList.add("hidden");
+            } else {
+              els.tabBoard.classList.add("active");
+              els.tabChat.classList.remove("active");
+              els.viewBoard.classList.remove("hidden");
+              els.viewChat.classList.add("hidden");
+            }
+          }
+
+          els.tabChat.addEventListener("click", () => setTab("chat"));
+          els.tabBoard.addEventListener("click", () => setTab("board"));
+        }
+
+        function setupChat() {
+          els.sendChatBtn.addEventListener("click", sendChatMessage);
+          els.chatInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              sendChatMessage();
+            }
+          });
+          els.chatInput.addEventListener("input", () =>
+            handleTypingChange(els.chatInput.value)
+          );
+        }
+
+        function sendChatMessage() {
+          const text = (els.chatInput.value || "").trim();
+          if (!text) return;
+          if (!state.currentRoomId || !state.ws) {
+            showToast("No hay conexión a sala");
+            return;
+          }
+
+          const cid = state.activeConvId || convIdForRoom(state.currentRoomId);
+          if (!cid) return;
+
+          if (cid.startsWith("room:")) {
+            sendWsMessage({ type: "text_message", payload: text });
+            addMessageToConversation(cid, {
+              fromSelf: true,
+              senderId: state.user?.id,
+              senderName: state.user?.username,
+              text,
+              dm: false,
+            });
+          } else if (cid.startsWith("dm:")) {
+            const userId = cid.slice("dm:".length);
+            sendWsMessage({
+              type: "direct_message",
+              payload: {
+                recipient_id: userId,
+                content: text,
+              },
+            });
+            addMessageToConversation(cid, {
+              fromSelf: true,
+              senderId: state.user?.id,
+              senderName: state.user?.username,
+              text,
+              dm: true,
+            });
+          }
+          els.chatInput.value = "";
+          stopTyping();
+        }
+
+        function setupLogControls() {
+          els.clearLogBtn.addEventListener("click", () => {
+            els.debugLog.value = "";
+          });
+        }
+
+        /* Init */
+
+        window.addEventListener("DOMContentLoaded", () => {
+          initDomRefs();
+          setupAuthModal();
+          setupRoomControls();
+          setupTabs();
+          setupChat();
+          setupLogControls();
+          initCanvas();
+        });
+      })();
+    </script>
+  </body>
+</html>
+

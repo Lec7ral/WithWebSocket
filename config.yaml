@@ -1,0 +1,14 @@
+# Default configuration for the CollabSphere application.
+# These values can be overridden by environment variables.
+
+server:
+  port: "8010"
+
+database:
+  url: "postgres://postgres:postgresok@localhost:5432/WithWebSocket?sslmode=disable"
+
+jwt:
+  secret: "a-very-secret-and-long-key-that-should-be-changed"
+
+log:
+  level: "debug" # Can be debug, info, warn, error

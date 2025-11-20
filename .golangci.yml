@@ -1,0 +1,26 @@
+run:
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+
+linters:
+  # We disable all linters first and then explicitly enable the ones we want.
+  # This gives us more control.
+  disable-all: true
+  enable:
+    - gofmt         # Checks if code is formatted with gofmt.
+    - goimports     # Sorts and checks imports.
+    - revive        # A powerful, configurable linter. Replaces golint.
+    - govet         # Analyzes code for suspicious constructs.
+    - staticcheck   # A huge set of static analysis checks.
+    - unused        # Checks for unused code.
+    - errcheck      # Checks for unhandled errors.
+    - ineffassign   # Checks for inefficient assignments.
+    - typecheck     # Ensures the code compiles and types are correct.
+    - unconvert     # Checks for unnecessary type conversions.
+
+issues:
+  # Exclude some known false-positives or noisy checks.
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck # Don't require error checking in tests for assertions.

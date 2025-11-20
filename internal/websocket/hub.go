@@ -1,0 +1,201 @@
+package websocket
+
+import (
+	"context"
+	"encoding/json"
+	"log/slog"
+
+	"github.com/Lec7ral/WithWebSocket/internal/auth"
+	"github.com/Lec7ral/WithWebSocket/internal/domain"
+	"github.com/Lec7ral/WithWebSocket/internal/repository"
+	"github.com/gorilla/websocket"
+	"golang.org/x/time/rate"
+)
+
+// registrationRequest bundles all information needed to register a client.
+type registrationRequest struct {
+	claims *auth.Claims
+	conn   *websocket.Conn
+	roomID string
+}
+
+// RoomInfo is a simple structure for returning public information about a room.
+type RoomInfo struct {
+	ID          string `json:"id"`
+	ClientCount int    `json:"clientCount"`
+}
+
+type Hub struct {
+	repo             repository.Repository
+	rooms            map[string]map[*Client]bool
+	clients          map[string]*Client
+	whiteboardStates map[string]*domain.WhiteboardState
+	broadcast        chan *domain.Message
+	register         chan *registrationRequest
+	unregister       chan *Client
+	getRooms         chan chan []RoomInfo
+}
+
+func NewHub(repo repository.Repository) *Hub {
+	return &Hub{
+		repo:             repo,
+		broadcast:        make(chan *domain.Message, 256),
+		register:         make(chan *registrationRequest),
+		unregister:       make(chan *Client),
+		rooms:            make(map[string]map[*Client]bool),
+		clients:          make(map[string]*Client),
+		whiteboardStates: make(map[string]*domain.WhiteboardState),
+		getRooms:         make(chan chan []RoomInfo),
+	}
+}
+
+func (h *Hub) Run() {
+	for {
+		select {
+		case req := <-h.register:
+			// If this is the first client, load the whiteboard state.
+			if _, ok := h.rooms[req.roomID]; !ok {
+				h.rooms[req.roomID] = make(map[*Client]bool)
+				state, err := h.repo.GetWhiteboardState(context.Background(), req.roomID)
+				if err != nil {
+					h.whiteboardStates[req.roomID] = &domain.WhiteboardState{Events: []domain.DrawEvent{}}
+				} else {
+					h.whiteboardStates[req.roomID] = state
+				}
+			}
+
+			existingUsers := make([]*domain.User, 0, len(h.rooms[req.roomID]))
+			for c := range h.rooms[req.roomID] {
+				existingUsers = append(existingUsers, &domain.User{ID: c.ID, UserName: c.Username})
+			}
+
+			client := &Client{
+				hub:      h,
+				ID:       req.claims.UserID,
+				Username: req.claims.Username,
+				RoomID:   req.roomID,
+				conn:     req.conn,
+				send:     make(chan []byte, 256),
+				limiter:  rate.NewLimiter(5, 10),
+			}
+
+			h.rooms[client.RoomID][client] = true
+			h.clients[client.ID] = client
+			slog.Info("Client registered", "clientID", client.ID, "username", client.Username, "roomID", client.RoomID)
+
+			initialState := &domain.RoomState{Users: existingUsers, Whiteboard: h.whiteboardStates[client.RoomID]}
+			initialStateMsg := &domain.Message{Type: "initial_state", Payload: initialState}
+			jsonInitialState, _ := json.Marshal(initialStateMsg)
+			client.send <- jsonInitialState
+
+			allUsersInRoom := append(existingUsers, &domain.User{ID: client.ID, UserName: client.Username})
+			updateMsg := &domain.Message{Type: "user_list_update", Payload: allUsersInRoom}
+			jsonUpdateMsg, _ := json.Marshal(updateMsg)
+			for c := range h.rooms[client.RoomID] {
+				if c.ID != client.ID {
+					c.send <- jsonUpdateMsg
+				}
+			}
+
+			go client.writePump()
+			go client.readPump()
+
+		case client := <-h.unregister:
+			if room, ok := h.rooms[client.RoomID]; ok {
+				if _, clientExists := room[client]; clientExists {
+					delete(room, client)
+					delete(h.clients, client.ID)
+					close(client.send)
+					slog.Info("Client unregistered", "clientID", client.ID, "roomID", client.RoomID)
+
+					if len(room) == 0 {
+						delete(h.rooms, client.RoomID)
+						delete(h.whiteboardStates, client.RoomID)
+						slog.Info("Room deleted", "roomID", client.RoomID)
+						continue
+					}
+
+					remainingUsers := make([]*domain.User, 0, len(room))
+					for c := range room {
+						remainingUsers = append(remainingUsers, &domain.User{ID: c.ID, UserName: c.Username})
+					}
+					updateMsg := &domain.Message{Type: "user_list_update", Payload: remainingUsers}
+					jsonUpdateMsg, _ := json.Marshal(updateMsg)
+					for c := range room {
+						c.send <- jsonUpdateMsg
+					}
+				}
+			}
+
+		case message := <-h.broadcast:
+			// --- Whiteboard state persistence ---
+			isDrawEvent := message.Type == "draw_start" || message.Type == "draw_move" || message.Type == "draw_end"
+			isClearEvent := message.Type == "clear_board"
+			if isDrawEvent || isClearEvent {
+				// ... (whiteboard persistence logic)
+			}
+
+			// --- Message persistence ---
+			if message.Type == "text_message" {
+				if err := h.repo.SaveMessage(context.Background(), message); err != nil {
+					slog.Error("Failed to save message", "error", err)
+				}
+			}
+
+			// --- Message Routing ---
+			if message.Type == "direct_message" {
+				if payload, ok := message.Payload.(domain.DirectMessagePayload); ok {
+					if recipient, ok := h.clients[payload.RecipientID]; ok {
+						dm := &domain.Message{Type: "direct_message", Sender: message.Sender, Payload: payload.Content}
+						jsonDM, _ := json.Marshal(dm)
+						select {
+						case recipient.send <- jsonDM:
+						default:
+							slog.Warn("Failed to send DM, recipient channel full", "recipientID", payload.RecipientID)
+						}
+					}
+				}
+				continue
+			}
+
+			// --- Room Broadcast Logic ---
+			if room, ok := h.rooms[message.RoomID]; ok {
+				messageToSend, err := json.Marshal(message)
+				if err != nil {
+					slog.Error("Failed to marshal broadcast message", "error", err)
+					continue
+				}
+
+				for cl := range room {
+					isEphemeralEvent := message.Type == "draw_start" || message.Type == "draw_move" || message.Type == "draw_end" || message.Type == "clear_board" || message.Type == "typing_start" || message.Type == "typing_stop"
+					if isEphemeralEvent && cl.ID == message.Sender {
+						continue
+					}
+
+					select {
+					case cl.send <- messageToSend:
+					default:
+						close(cl.send)
+						delete(room, cl)
+					}
+				}
+			}
+
+		case responseChan := <-h.getRooms:
+			rooms := make([]RoomInfo, 0, len(h.rooms))
+			for roomID, clients := range h.rooms {
+				if len(clients) > 0 {
+					rooms = append(rooms, RoomInfo{ID: roomID, ClientCount: len(clients)})
+				}
+			}
+			responseChan <- rooms
+		}
+	}
+}
+
+// GetActiveRooms is a thread-safe method to get the list of active rooms.
+func (h *Hub) GetActiveRooms() []RoomInfo {
+	responseChan := make(chan []RoomInfo)
+	h.getRooms <- responseChan
+	return <-responseChan
+}

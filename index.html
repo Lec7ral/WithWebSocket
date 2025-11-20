@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CollabSphere</title>
+    <style>
+        :root {
+            --primary-color: #0d6efd; --secondary-color: #6c757d; --bg-color: #f8f9fa;
+            --surface-color: #ffffff; --border-color: #dee2e6; --text-color: #212529;
+            --font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --sent-bg: #0d6efd; --received-bg: #e9ecef; --system-color: #6c757d;
+        }
+        body { font-family: var(--font-family); margin: 0; background-color: var(--bg-color); color: var(--text-color); font-size: 16px; }
+        .main-layout { display: grid; grid-template-columns: 280px 1fr 350px; height: 100vh; gap: 10px; padding: 10px; box-sizing: border-box; }
+        .panel { background-color: var(--surface-color); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header { padding: 15px; border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 18px; }
+        .panel-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: var(--surface-color); padding: 30px; border-radius: 8px; text-align: center; }
+        .hidden { display: none; }
+        input, select, button { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid var(--border-color); box-sizing: border-box; }
+        button { background-color: var(--primary-color); color: white; border: none; cursor: pointer; font-weight: 500; }
+        button:disabled { background-color: #a9cffa; cursor: not-allowed; }
+        .tabs { display: flex; border-bottom: 1px solid var(--border-color); }
+        .tab-button { padding: 10px 15px; border: none; background: none; cursor: pointer; font-size: 16px; }
+        .tab-button.active { border-bottom: 3px solid var(--primary-color); font-weight: 600; }
+        .tab-content { padding: 15px; }
+        #chat-history { display: flex; flex-direction: column; gap: 10px; height: calc(100vh - 250px); overflow-y: auto; padding: 10px; }
+        #log { font-size: 11px; white-space: pre-wrap; word-wrap: break-word; }
+        #whiteboard-container { position: relative; }
+        #whiteboard { border: 1px solid var(--border-color); cursor: crosshair; }
+        .remote-cursor { position: absolute; width: 10px; height: 10px; border-radius: 50%; background-color: red; pointer-events: none; transition: top 0.05s, left 0.05s; }
+        .remote-cursor-label { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px; white-space: nowrap; }
+        .conversation-item { padding: 10px; border-bottom: 1px solid #f0f0f0; cursor: pointer; border-left: 4px solid transparent; }
+        .conversation-item:hover { background-color: #f8f9fa; }
+        .conversation-item.active { border-left-color: var(--primary-color); background-color: #e7f1ff; font-weight: 600; }
+        .message-container { display: flex; flex-direction: column; }
+        .message-bubble { max-width: 70%; padding: 8px 12px; border-radius: 18px; word-wrap: break-word; }
+        .message-bubble.sent { align-self: flex-end; background-color: var(--sent-bg); color: white; }
+        .message-bubble.received { align-self: flex-start; background-color: var(--received-bg); color: var(--text-color); }
+        .message-sender { font-size: 12px; color: var(--secondary-color); margin: 0 5px 2px; }
+        .sent .message-sender { align-self: flex-end; }
+        .system-message { text-align: center; color: var(--system-color); font-size: 12px; font-style: italic; }
+        #typing-indicator { font-style: italic; color: var(--secondary-color); height: 20px; padding: 0 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Welcome to CollabSphere</h2>
+            <input type="text" id="username" placeholder="Enter your username">
+            <button id="login-btn">Login</button>
+        </div>
+    </div>
+
+    <div id="app-layout" class="main-layout hidden">
+        <div class="panel">
+            <div class="panel-header">Conversations</div>
+            <div class="panel-content">
+                <h3>My Info</h3>
+                <div><strong>User:</strong> <span id="display-username"></span></div>
+                <div><strong>Status:</strong> <span id="status" class="status disconnected">DISCONNECTED</span></div>
+                <hr>
+                <h3>Join Room</h3>
+                <input type="text" id="room-id" placeholder="Enter room name to join/create">
+                <button id="connect-btn" disabled>Join Room</button>
+                <button id="disconnect-btn" disabled>Leave Current Room</button>
+                <hr>
+                <h3>Rooms</h3>
+                <div id="room-list"></div>
+                <h3>Direct Messages</h3>
+                <div id="user-list"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="chat">Chat</button>
+                <button class="tab-button" data-tab="whiteboard">Whiteboard</button>
+            </div>
+            <div id="chat-tab" class="tab-content">
+                <div id="chat-history"></div>
+                <div id="typing-indicator"></div>
+                <input type="text" id="chat-input" placeholder="Type a message and press Enter..." disabled>
+            </div>
+            <div id="whiteboard-tab" class="tab-content hidden">
+                <div>
+                    Color: <input type="color" id="color-picker" value="#000000">
+                    <button id="clear-board-btn" disabled>Clear Board</button>
+                </div>
+                <div id="whiteboard-container">
+                    <canvas id="whiteboard" width="700" height="500"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">Raw Event Log</div>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const loginModal = document.getElementById('login-modal'), appLayout = document.getElementById('app-layout');
+        const usernameInput = document.getElementById('username'), loginBtn = document.getElementById('login-btn');
+        const displayUsername = document.getElementById('display-username');
+        const roomIdInput = document.getElementById('room-id'), connectBtn = document.getElementById('connect-btn'), disconnectBtn = document.getElementById('disconnect-btn');
+        const statusDisplay = document.getElementById('status'), roomList = document.getElementById('room-list'), userList = document.getElementById('user-list');
+        const chatHistory = document.getElementById('chat-history'), typingIndicator = document.getElementById('typing-indicator'), chatInput = document.getElementById('chat-input');
+        const whiteboardContainer = document.getElementById('whiteboard-container'), whiteboard = document.getElementById('whiteboard'), colorPicker = document.getElementById('color-picker'), clearBoardBtn = document.getElementById('clear-board-btn');
+        const logDiv = document.getElementById('log'), tabs = document.querySelectorAll('.tab-button'), tabContents = document.querySelectorAll('.tab-content');
+
+        // --- State ---
+        let ws = null, token = null, myUserID = null, myUsername = null, currentRoom = null, currentConversationID = null;
+        let drawing = false, lastPos = { x: 0, y: 0 };
+        let conversations = {}, usersInRoom = new Map(), remoteCursors = new Map();
+        let expectedClose = false, reconnectAttempts = 0;
+        const ctx = whiteboard.getContext('2d');
+
+        // --- Utility Functions ---
+        const log = (message, data) => {
+            const entry = document.createElement('div');
+            entry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}] ${message}</strong>: ${data ? JSON.stringify(data, null, 2) : ''}`;
+            logDiv.prepend(entry);
+        };
+        const parseJwt = (token) => { try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return null; } };
+
+        // --- UI Update Functions ---
+        function updateUIState(isConnected) {
+            connectBtn.disabled = isConnected || !token;
+            disconnectBtn.disabled = !isConnected;
+            chatInput.disabled = !isConnected;
+            clearBoardBtn.disabled = !isConnected;
+            statusDisplay.textContent = isConnected ? `CONNECTED to ${currentRoom}` : 'DISCONNECTED';
+            statusDisplay.className = `status ${isConnected ? 'connected' : 'disconnected'}`;
+            if (!isConnected) currentRoom = null;
+        }
+
+        function renderConversationList() {
+            roomList.innerHTML = '';
+            userList.innerHTML = '';
+
+            const roomConvId = `room:${currentRoom}`;
+            const roomItem = document.createElement('div');
+            roomItem.className = 'conversation-item';
+            roomItem.textContent = `${currentRoom} (Room Chat)`;
+            roomItem.dataset.convId = roomConvId;
+            roomItem.onclick = () => switchConversation(roomConvId);
+            roomList.appendChild(roomItem);
+
+            usersInRoom.forEach(user => {
+                if (user.ID === myUserID) return;
+                const dmConvId = `dm:${user.ID}`;
+                const userItem = document.createElement('div');
+                userItem.className = 'conversation-item';
+                userItem.textContent = user.UserName;
+                userItem.dataset.convId = dmConvId;
+                userItem.onclick = () => switchConversation(dmConvId);
+                userList.appendChild(userItem);
+            });
+            
+            switchConversation(currentConversationID || roomConvId);
+        }
+
+        function switchConversation(convId) {
+            currentConversationID = convId;
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.convId === convId);
+            });
+            renderChatHistory();
+        }
+
+        function renderChatHistory() {
+            chatHistory.innerHTML = '';
+            const history = conversations[currentConversationID] || [];
+            history.forEach(msg => {
+                const container = document.createElement('div');
+                container.className = 'message-container';
+
+                const bubble = document.createElement('div');
+                bubble.className = 'message-bubble';
+                bubble.textContent = msg.content;
+
+                if (msg.type === 'system') {
+                    bubble.className = 'system-message';
+                } else {
+                    const senderName = document.createElement('div');
+                    senderName.className = 'message-sender';
+                    if (msg.senderID === myUserID) {
+                        bubble.classList.add('sent');
+                        container.appendChild(bubble);
+                    } else {
+                        bubble.classList.add('received');
+                        senderName.textContent = msg.senderName;
+                        container.appendChild(senderName);
+                        container.appendChild(bubble);
+                    }
+                }
+                chatHistory.appendChild(container);
+            });
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // --- Event Handlers ---
+        loginBtn.addEventListener('click', async () => {
+            myUsername = usernameInput.value;
+            if (!myUsername) { alert('Please enter a username.'); return; }
+            try {
+                const response = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: myUsername }) });
+                if (!response.ok) throw new Error(`Login failed: ${response.statusText}`);
+                const data = await response.json();
+                token = data.token;
+                const claims = parseJwt(token);
+                myUserID = claims.userId;
+                displayUsername.textContent = myUsername;
+                log('Login successful', { myUsername, myUserID });
+                loginModal.classList.add('hidden');
+                appLayout.classList.remove('hidden');
+                updateUIState(false);
+            } catch (error) {
+                log('Login error', error.message); alert(`Login error: ${error.message}`);
+            }
+        });
+
+        connectBtn.addEventListener('click', () => {
+            const roomName = roomIdInput.value;
+            if (!roomName) { alert('Please enter a room name.'); return; }
+            if (ws) { alert("Already connected. Please disconnect first."); return; }
+            currentRoom = roomName;
+            connectWebSocket();
+        });
+
+        disconnectBtn.addEventListener('click', () => { if (ws) { expectedClose = true; ws.close(); } });
+
+        function connectWebSocket() {
+            const wsUrl = `ws://${window.location.host}/ws/${currentRoom}?token=${token}`;
+            log(`Connecting to ${wsUrl}`);
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => { log('WebSocket connection opened.'); updateUIState(true); reconnectAttempts = 0; };
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    log('Received JSON', data);
+                    handleServerMessage(data);
+                } catch (e) {
+                    log('Error parsing message', e);
+                }
+            };
+            ws.onclose = () => {
+                log('WebSocket connection closed.');
+                ws = null;
+                updateUIState(false);
+                if (!expectedClose) {
+                    reconnectAttempts++;
+                    const delay = Math.min(1000 * reconnectAttempts * 2, 30000);
+                    log(`Unexpected close. Attempting to reconnect in ${delay / 1000}s...`);
+                    setTimeout(connectWebSocket, delay);
+                }
+                expectedClose = false;
+            };
+            ws.onerror = (error) => { log('WebSocket error', error); };
+        }
+
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const message = chatInput.value;
+                if (message && ws) {
+                    if (currentConversationID.startsWith('dm:')) {
+                        const recipientId = currentConversationID.split(':')[1];
+                        sendWebSocketMessage({ type: 'direct_message', payload: { recipient_id: recipientId, content: message } });
+                    } else {
+                        sendWebSocketMessage({ type: 'text_message', payload: message });
+                    }
+                    addMessageToConversation(currentConversationID, { type: 'text', senderID: myUserID, content: message });
+                    chatInput.value = '';
+                }
+            }
+        });
+
+        // --- Whiteboard Logic ---
+        const getMousePos = (canvas, evt) => ({ x: Math.round(evt.clientX - canvas.getBoundingClientRect().left), y: Math.round(evt.clientY - canvas.getBoundingClientRect().top) });
+        const drawLine = (x1, y1, x2, y2, color, lw) => { ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.closePath(); };
+        
+        whiteboard.addEventListener('mousedown', (e) => {
+            if (!ws || drawing) return;
+            drawing = true;
+            lastPos = getMousePos(whiteboard, e);
+            const payload = { ...lastPos, color: colorPicker.value, lineWidth: 3 };
+            sendWebSocketMessage({ type: 'draw_start', payload });
+        });
+
+        whiteboard.addEventListener('mousemove', (e) => {
+            if (!drawing || !ws) return;
+            const currentPos = getMousePos(whiteboard, e);
+            const payload = { ...currentPos, color: colorPicker.value, lineWidth: 3 };
+            sendWebSocketMessage({ type: 'draw_move', payload });
+            drawLine(lastPos.x, lastPos.y, currentPos.x, currentPos.y, colorPicker.value, 3);
+            lastPos = currentPos;
+        });
+
+        const endDraw = () => { if (!drawing || !ws) return; drawing = false; sendWebSocketMessage({ type: 'draw_end' }); };
+        whiteboard.addEventListener('mouseup', endDraw);
+        whiteboard.addEventListener('mouseout', endDraw);
+        clearBoardBtn.addEventListener('click', () => sendWebSocketMessage({ type: 'clear_board' }));
+        const clearBoard = () => ctx.clearRect(0, 0, whiteboard.width, whiteboard.height);
+        
+        function replayDrawEvent(event) {
+            const { type, payload } = event;
+            switch (type) {
+                case 'draw_start':
+                    lastPos = { x: payload.x, y: payload.y };
+                    break;
+                case 'draw_move':
+                    drawLine(lastPos.x, lastPos.y, payload.x, payload.y, payload.color, payload.lineWidth);
+                    lastPos = { x: payload.x, y: payload.y };
+                    break;
+                case 'clear_board':
+                    clearBoard();
+                    break;
+            }
+        }
+        
+        // --- Message Handling ---
+        const sendWebSocketMessage = (data) => { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data)); };
+        
+        function handleServerMessage(data) {
+            const roomConvId = `room:${currentRoom}`;
+            switch (data.type) {
+                case 'initial_state':
+                    usersInRoom.clear();
+                    data.payload.users.forEach(u => usersInRoom.set(u.ID, u));
+                    if (!conversations[roomConvId]) conversations[roomConvId] = [];
+                    addMessageToConversation(roomConvId, { type: 'system', content: `You joined the room. Users present: ${data.payload.users.map(u=>u.UserName).join(', ') || 'none'}` });
+                    renderConversationList();
+                    if (data.payload.whiteboard?.events) { clearBoard(); data.payload.whiteboard.events.forEach(replayDrawEvent); }
+                    break;
+                case 'user_list_update':
+                    const updatedUsers = new Map();
+                    data.payload.forEach(u => updatedUsers.set(u.ID, u));
+                    const joined = [...updatedUsers.keys()].filter(id => !usersInRoom.has(id) && id !== myUserID);
+                    const left = [...usersInRoom.keys()].filter(id => !updatedUsers.has(id));
+                    if (joined.length > 0) addMessageToConversation(roomConvId, { type: 'system', content: `${updatedUsers.get(joined[0]).UserName} has joined.` });
+                    if (left.length > 0) addMessageToConversation(roomConvId, { type: 'system', content: `${usersInRoom.get(left[0]).UserName} has left.` });
+                    usersInRoom = updatedUsers;
+                    renderConversationList();
+                    break;
+                case 'text_message': // CORRECTED: Added this case
+                    if (data.sender !== myUserID) {
+                        const senderUser = usersInRoom.get(data.sender) || { UserName: 'Unknown' };
+                        addMessageToConversation(roomConvId, { type: 'text', senderID: data.sender, senderName: senderUser.UserName, content: data.payload });
+                    }
+                    break;
+                case 'direct_message':
+                    const dmConvId = `dm:${data.sender}`;
+                    const dmSender = usersInRoom.get(data.sender) || { UserName: data.sender.substring(0,8) };
+                    addMessageToConversation(dmConvId, { type: 'text', senderID: data.sender, senderName: dmSender.UserName, content: data.payload });
+                    break;
+                case 'draw_start': case 'draw_move': case 'draw_end': case 'clear_board':
+                    if (data.sender !== myUserID) replayDrawEvent(data);
+                    break;
+            }
+        }
+
+        function addMessageToConversation(convId, msg) {
+            if (!conversations[convId]) conversations[convId] = [];
+            conversations[convId].push(msg);
+            if (convId === currentConversationID) {
+                renderChatHistory();
+            }
+        }
+
+        // Tab switching logic
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                tabContents.forEach(content => content.classList.toggle('hidden', content.id !== `${tab.dataset.tab}-tab`));
+            });
+        });
+
+        // --- Init ---
+        usernameInput.value += Math.floor(Math.random() * 1000);
+    </script>
+</body>
+</html>
