@@ -1,12 +1,9 @@
-# ===================================================================
-# Domcloud Deployment Configuration for CollabSphere (Fully Automated)
-# ===================================================================
-
 source: https://github.com/Lec7ral/WithWebSocket.git
 
 features:
   - go
 
+# 1. Usamos el addon. Domcloud se encarga de crear la BD y el usuario.
 addons:
   - postgresql
 
@@ -14,21 +11,16 @@ nginx:
   root: public_html/public
   passenger:
     enabled: "on"
-    # AHORA, el comando de inicio es nuestro script de shell.
+    # 2. El comando de inicio es nuestro script inteligente.
     app_start_command: ./start.sh
 
 commands:
-  # 1. Descarga y sincroniza las dependencias.
+  # 3. Solo compilamos la aplicación. No tocamos la base de datos aquí.
   - go mod tidy
-  - go mod download
-
-  # 2. Compila la aplicación Go en un binario llamado 'collabsphere'.
   - go build -o collabsphere ./cmd/collabsphere
 
 vars:
-  # ¡MUY IMPORTANTE! Debes establecer este valor de forma segura
-  # a través del panel de Domcloud o usando la CLI.
-  JWT_SECRET: "CHANGE_THIS_IN_THE_DOMCLOUD_UI_OR_CLI"
-
-  # Nivel de Log para Producción.
+  # 4. NO definimos DATABASE_URL aquí. Dejamos que el addon lo haga.
+  #    Solo definimos los secretos de nuestra aplicación.
+  JWT_SECRET: "DEBES_CAMBIAR_ESTO_EN_EL_PANEL_DE_DOMCLOUD"
   LOG_LEVEL: "info"
