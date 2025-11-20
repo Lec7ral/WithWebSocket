@@ -4,8 +4,15 @@
 server:
   port: "8010"
 
+
 database:
-  url: "postgres://postgres:postgresok@localhost:5432/WithWebSocket?sslmode=disable"
+  url: "postgres://:postgresok@localhost:5432/WithWebSocket?sslmode=disable"
+  POSTGRES_HOST: "localhost"
+
+  POSTGRES_PORT: 5432
+  POSTGRES_NAME: <database name>
+  POSTGRES_USER: <username login>
+  POSTGRES_PASS: <password login>
 
 jwt:
   secret: "a-very-secret-and-long-key-that-should-be-changed"
