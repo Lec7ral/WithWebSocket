@@ -1,55 +1,38 @@
-# URL del repositorio de código fuente.
+# Configuración de despliegue para Domcloud (Modelo PaaS)
 source: https://github.com/Lec7ral/WithWebSocket.git
 
 # Habilita la característica de Go para que Domcloud instale las herramientas de Go.
 features:
   - go
 
+# Habilita el addon de PostgreSQL. Domcloud creará una base de datos
+# y automáticamente inyectará la variable de entorno DATABASE_URL.
+addons:
+  - postgresql
+
 # Configuración para el servidor web Nginx y el servidor de aplicaciones Passenger.
 nginx:
-  # El 'root' no es relevante para nuestra aplicación Go, ya que el binario
-  # sirve el frontend directamente. Se puede dejar como está.
   root: public_html/public
   passenger:
     enabled: "on"
-    # Este es el comando que Passenger ejecutará para iniciar tu aplicación.
-    # 1. 'env PORT=$PORT': Pasa el puerto asignado por el entorno a nuestra app.
-    # 2. './collabsphere': Ejecuta el binario que compilaremos en los pasos de abajo.
+    # Comando para iniciar la aplicación. Ejecuta el binario que compilamos.
     app_start_command: env PORT=$PORT ./collabsphere
 
-# Comandos que se ejecutan durante la fase de 'build' y 'deploy' del despliegue.
+# Comandos que se ejecutan durante la fase de 'build' del despliegue.
 commands:
-  # 1. Descarga y sincroniza las dependencias del proyecto.
+  # 1. Descarga y sincroniza las dependencias.
   - go mod tidy
   - go mod download
 
-  # 2. Compila la aplicación Go. Este es el paso más importante.
-  #    - 'go build' compila el código.
-  #    - '-o collabsphere' nombra el binario de salida como 'collabsphere'.
-  #    - './cmd/collabsphere' es la ruta a nuestro paquete 'main'.
+  # 2. Compila la aplicación Go en un binario llamado 'collabsphere'.
   - go build -o collabsphere ./cmd/collabsphere
 
-  # 3. Aprovisionamiento de la Base de Datos.
-  #    Estos comandos se ejecutan una vez para configurar PostgreSQL.
-  #    ' || true' evita que el despliegue falle si el usuario o la BD ya existen.
-  - |
-    sudo -u postgres psql -c "CREATE USER myappuser WITH PASSWORD 'ChangeThisPassword_e27a9f3b';" || true
-    sudo -u postgres psql -c "CREATE DATABASE collabsphere_db WITH OWNER myappuser ENCODING 'UTF8';" || true
-  
-  # 4. Ejecuta nuestro schema.sql para crear las tablas.
-  #    Este comando usa la variable DATABASE_URL que definimos abajo.
-  - psql -f ./schema.sql
-
-# Variables de entorno que se inyectarán en el entorno de la aplicación.
+# Variables de entorno para la aplicación en producción.
+# NO es necesario definir DATABASE_URL aquí, el addon lo hace por nosotros.
 vars:
-  # 1. URL de la Base de Datos.
-  #    ¡IMPORTANTE! La contraseña aquí debe coincidir con la usada en el comando 'CREATE USER'.
-  DATABASE_URL: "postgres://myappuser:ChangeThisPassword_e27a9f3b@localhost:5432/collabsphere_db?sslmode=disable"
-
-  # 2. Secreto para los JWT.
-  #    ¡MUY IMPORTANTE! Debes cambiar este valor por uno propio y más seguro.
+  # ¡MUY IMPORTANTE! Debes cambiar este valor por uno propio y seguro
+  # usando el comando 'dom env:set JWT_SECRET=...'
   JWT_SECRET: "ChangeThisSecret_8c7b6a5d-4e3f-4a1b-9c8d-9e0f1a2b3c4d"
 
-  # 3. Nivel de Log para Producción.
-  #    'info' es un buen valor para no llenar los logs con mensajes de debug.
+  # Nivel de Log para Producción.
   LOG_LEVEL: "info"
