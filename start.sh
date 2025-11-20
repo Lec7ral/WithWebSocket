@@ -2,12 +2,10 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 
 echo "--- Running database migration ---"
-# El addon de Domcloud inyecta $DATABASE_URL en este entorno.
-# psql lo usará automáticamente para conectarse y crear las tablas.
+# psql usará la DATABASE_URL que definimos en domcloud.yml
+# y que se inyecta en este entorno de ejecución.
 psql -f ./schema.sql
 echo "--- Migration finished ---"
 
 echo "--- Starting CollabSphere server ---"
-# Le pasamos la DATABASE_URL a nuestra aplicación como una variable de entorno
-# para que Viper la lea.
-exec env PORT=$PORT DATABASE_URL=$DATABASE_URL ./collabsphere
+exec env PORT=$PORT ./collabsphere

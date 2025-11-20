@@ -1,0 +1,35 @@
+# ===================================================================
+# Domcloud Deployment Configuration for CollabSphere (with Pre-existing DB)
+# ===================================================================
+
+source: https://github.com/Lec7ral/WithWebSocket.git
+
+features:
+  - go
+
+# NOTA: No necesitamos la sección 'addons' porque ya tenemos una base de datos.
+
+nginx:
+  root: public_html/public
+  passenger:
+    enabled: "on"
+    # El comando de inicio ahora es un script de shell que primero
+    # ejecuta la migración y luego inicia la aplicación.
+    app_start_command: ./start.sh
+
+commands:
+  # 1. Compila la aplicación.
+  - go mod tidy
+  - go build -o collabsphere ./cmd/collabsphere
+
+vars:
+  # 1. URL de la Base de Datos.
+  #    ¡IMPORTANTE! Usamos la URL exacta que te proporcionó Domcloud.
+  DATABASE_URL: "postgres://boarded:lN9j11+P+99m)frFCF@localhost:5432/boarded_db?sslmode=disable"
+
+  # 2. Secreto para los JWT.
+  #    Debes cambiar esto por un valor seguro.
+  JWT_SECRET: "GENERAR_UN_SECRETO_REAL_Y_PONERLO_AQUI"
+
+  # 3. Nivel de Log para Producción.
+  LOG_LEVEL: "info"
