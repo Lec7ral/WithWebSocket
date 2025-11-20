@@ -1,5 +1,5 @@
 # ===================================================================
-# Domcloud Deployment Configuration for CollabSphere (with Pre-existing DB)
+# Domcloud Deployment Configuration for CollabSphere (Final Automated Version)
 # ===================================================================
 
 source: https://github.com/Lec7ral/WithWebSocket.git
@@ -7,29 +7,29 @@ source: https://github.com/Lec7ral/WithWebSocket.git
 features:
   - go
 
-# NOTA: No necesitamos la sección 'addons' porque ya tenemos una base de datos.
-
 nginx:
   root: public_html/public
   passenger:
     enabled: "on"
-    # El comando de inicio ahora es un script de shell que primero
-    # ejecuta la migración y luego inicia la aplicación.
+    # El comando de inicio es nuestro script de shell.
     app_start_command: ./start.sh
 
 commands:
-  # 1. Compila la aplicación.
+  # 1. Asegura que el script de arranque sea ejecutable.
+  - chmod +x ./start.sh
+  # 2. Compila la aplicación.
   - go mod tidy
   - go build -o collabsphere ./cmd/collabsphere
 
 vars:
   # 1. URL de la Base de Datos.
-  #    ¡IMPORTANTE! Usamos la URL exacta que te proporcionó Domcloud.
-  DATABASE_URL: "postgres://boarded:lN9j11+P+99m)frFCF@localhost:5432/boarded_db?sslmode=disable"
+  #    Usamos comillas simples (') para manejar de forma segura los
+  #    caracteres especiales en la contraseña.
+  DATABASE_URL: 'postgres://boarded:lN9j11+P+99m)frFCF@localhost:5432/boarded_db?sslmode=disable'
 
   # 2. Secreto para los JWT.
-  #    Debes cambiar esto por un valor seguro.
-  JWT_SECRET: "GENERAR_UN_SECRETO_REAL_Y_PONERLO_AQUI"
+  #    ¡DEBES CAMBIAR ESTE VALOR POR UNO PROPIO Y MÁS SEGURO!
+  JWT_SECRET: 'ChangeThisBeforeGoingLive_a9b8c7d6e5f4'
 
   # 3. Nivel de Log para Producción.
-  LOG_LEVEL: "info"
+  LOG_LEVEL: 'info'
