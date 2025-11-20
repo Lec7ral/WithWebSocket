@@ -10,7 +10,7 @@ import (
 // Config stores all configuration of the application.
 // The values are read by Viper from a config file and/or environment variables.
 type Config struct {
-	ServerPort  string `mapstructure:"SERVER_PORT"`
+	ServerPort  string `mapstructure:"PORT"`
 	DatabaseURL string `mapstructure:"DATABASE_URL"`
 	JWTSecret   string `mapstructure:"JWT_SECRET"`
 	LogLevel    string `mapstructure:"LOG_LEVEL"`
@@ -21,7 +21,7 @@ func New() (*Config, error) {
 	// --- Set up Viper ---
 
 	// 1. Set default values (lowest priority)
-	viper.SetDefault("SERVER_PORT", "8080")
+	viper.SetDefault("PORT", "8080")
 	viper.SetDefault("DATABASE_URL", "postgres://boarded:lN9j11+P+99m)frFCF@localhost:5432/boarded_db?sslmode=disable")
 	viper.SetDefault("JWT_SECRET", "a-very-secret-and-long-key-that-should-be-changed")
 	viper.SetDefault("LOG_LEVEL", "debug")
