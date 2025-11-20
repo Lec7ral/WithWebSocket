@@ -23,7 +23,7 @@ import (
 
 // Embed the 'static' directory.
 //
-//go:embed all:sta
+
 //go:embed all:static
 var embeddedFS embed.FS
 

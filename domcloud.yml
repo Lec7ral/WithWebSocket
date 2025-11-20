@@ -33,8 +33,8 @@ commands:
   #    Estos comandos se ejecutan una vez para configurar PostgreSQL.
   #    ' || true' evita que el despliegue falle si el usuario o la BD ya existen.
   - |
-      sudo -u postgres psql -c "CREATE USER myappuser WITH PASSWORD 'ChangeThisPassword_e27a9f3b';" || true
-      sudo -u postgres psql -c "CREATE DATABASE collabsphere_db WITH OWNER myappuser ENCODING 'UTF8';" || true
+    sudo -u postgres psql -c "CREATE USER myappuser WITH PASSWORD 'ChangeThisPassword_e27a9f3b';" || true
+    sudo -u postgres psql -c "CREATE DATABASE collabsphere_db WITH OWNER myappuser ENCODING 'UTF8';" || true
   
   # 4. Ejecuta nuestro schema.sql para crear las tablas.
   #    Este comando usa la variable DATABASE_URL que definimos abajo.
