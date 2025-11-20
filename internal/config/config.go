@@ -22,7 +22,7 @@ func New() (*Config, error) {
 
 	// 1. Set default values (lowest priority)
 	viper.SetDefault("SERVER_PORT", "8080")
-	viper.SetDefault("DATABASE_URL", "postgres://postgres:postgresok@localhost:5432/WithWebSocket?sslmode=disable")
+	viper.SetDefault("DATABASE_URL", "postgres://boarded:lN9j11+P+99m)frFCF@localhost:5432/boarded_db?sslmode=disable")
 	viper.SetDefault("JWT_SECRET", "a-very-secret-and-long-key-that-should-be-changed")
 	viper.SetDefault("LOG_LEVEL", "debug")
 
